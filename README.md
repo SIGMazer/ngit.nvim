@@ -1,5 +1,15 @@
 # nvim-auto-git
 Neovim plugin that make using git with neovim easer 
+
+## ScreenShot
+<details>
+      <summary>Git Status</summary>
+<img src="https://github.com/SIGMazer/nvim-auto-git/assets/88988252/b8950455-6d7e-445e-8b9b-1fa7dfd904da" alt="Alt text" title="Optional title">
+Press the letter in help to execute the command 
+Ex. 
+    if press `a`  when cursor at the same line with `a.txt` it will add it to staging 
+</details>
+
 ## Installation 
 
 Use [packer](https://github.com/wbthomason/packer.nvim) to quick install.
@@ -21,6 +31,12 @@ cd nvim-auto-git
 ```
 Use `:UpdateRemotePlugins` to update packeges and restart nvim 
 
+## Remap
+Add to `remap.lua` :
+```
+vim.keymap.set("n","<leader>gs",'<Cmd>lua vim.cmd(":AutoGit")<CR>')
+```
+
 ## TO DO
 - [x] add 
 - [x] commit
@@ -28,6 +44,7 @@ Use `:UpdateRemotePlugins` to update packeges and restart nvim
 - [x] pull
 - [x] restore
 - [ ] merge
+- [ ] stash
 - [ ] diff 
 - [ ] branchs (add, switch) 
 - [ ] log
