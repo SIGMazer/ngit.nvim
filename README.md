@@ -9,6 +9,10 @@ Press the letter in help to execute the command
 Ex. 
     if press `a`  when cursor at the same line with `a.txt` it will add it to staging 
 </details>
+<details>
+      <summary>Git Branch</summary>
+<img src="https://github.com/SIGMazer/nvim-auto-git/assets/88988252/dbd74cf9-cfbc-443a-855c-df35a3790a06" alt="Alt text" title="Optional title">
+</details>
 
 ## Installation 
 
@@ -35,6 +39,7 @@ Use `:UpdateRemotePlugins` to update packeges and restart nvim
 Add to `remap.lua` :
 ```
 vim.keymap.set("n","<leader>gs",'<Cmd>lua vim.cmd(":AutoGit")<CR>')
+vim.keymap.set("n","<leader>gb",'<Cmd>lua vim.cmd(":AutoGitBranch")<CR>')
 ```
 
 ## TO DO
@@ -43,10 +48,10 @@ vim.keymap.set("n","<leader>gs",'<Cmd>lua vim.cmd(":AutoGit")<CR>')
 - [x] push
 - [x] pull
 - [x] restore
-- [ ] merge
+- [x] merge
 - [ ] stash
 - [ ] diff 
-- [ ] branchs (add, switch) 
+- [x] branchs (add, switch) 
 - [ ] log
 - [ ] reset 
 
