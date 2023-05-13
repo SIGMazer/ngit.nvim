@@ -26,6 +26,7 @@ Use `:UpdateRemotePlugins` to update packeges and restart nvim
 - [x] commit
 - [x] push
 - [x] pull
+- [x] restore
 - [ ] merge
 - [ ] diff 
 - [ ] branchs (add, switch) 
