@@ -3,12 +3,10 @@ import neovim
 import subprocess
 
 
-
 @neovim.plugin
 class AutoGitPlugin(object):
     def __init__(self, vim):
         self.vim = vim
-
         self.buffer_status = """
 help
 
@@ -22,8 +20,10 @@ exit : q
 
 Current branch = {}
 
-file status
+untracked files
+{}
 
+staging files
 {}
 """
         self.buffer_branch="""
@@ -43,18 +43,42 @@ Branchs
 {}
 """
 
-        self.start_line_branch = 14
-        self.start_line_status= 15
+        self.start_line_branch = 13
+        self.start_line_status= 13
     @neovim.command('AutoGit', nargs='*', range='')
     def auto_git(self, args, range):
         # Run git status command
-        result = subprocess.run(['git', 'status', '--short'], capture_output=True, text=True)
+        untracked_files= subprocess.run(['git', 'status', '--short'], capture_output=True, text=True)
+        staging_files= subprocess.run(['git', 'diff','--name-only', '--cached'], capture_output=True, text=True)
         current_branch = subprocess.run(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], capture_output=True, text=True)
+        l = untracked_files.stdout.split("\n")
+        for i in l[:-1]:
+            if  i[1] == ' ':
+                l.remove(i)
 
-        self.vim.command('vs')
-        self.vim.command('enew')
+        untracked_files = '\n'.join(l)
+        l = []
+        width = 100 
+        height = 80 
+        content = self.buffer_status.format(current_branch.stdout.strip(), untracked_files, staging_files.stdout).strip().splitlines()
+
+        buf = self.vim.api.create_buf(False, True)
+
+        self.vim.api.buf_set_lines(buf, 0, -1, False, content)
+
+
+
+        win = self.vim.api.open_win(buf, True, {
+            'relative': 'win',
+            'width': width,
+            'height': height,
+            'col': int((self.vim.current.window.width - width) / 2),
+            'row': int((self.vim.current.window.height - height) / 2),
+            'border': 'rounded',
+            'style': 'minimal',
+        })
+
         
-        self.vim.current.buffer[:] = self.buffer_status.format(current_branch.stdout.strip(), result.stdout).strip().splitlines()
 
         # Prevent editing in the buffer
         self.vim.command('setlocal nomodifiable')
@@ -79,10 +103,24 @@ Branchs
         current_branch = subprocess.run(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], capture_output=True, text=True)
         result.stdout = result.stdout.replace('*',' ')
         
-        self.vim.command('vs')
-        self.vim.command('enew')
+        width = 100 
+        height = 80 
+        content = self.buffer_branch.format(current_branch.stdout.strip(), result.stdout).strip().splitlines()
+
+        buf = self.vim.api.create_buf(False, True)
+        self.vim.api.buf_set_lines(buf, 0, -1, False, content)
+
+        win = self.vim.api.open_win(buf, True, {
+            'relative': 'editor',
+            'width': width,
+            'height': height,
+            'col': int((self.vim.current.window.width - width) / 2),
+            'row': int((self.vim.current.window.height - height) / 2),
+            'border': 'rounded',
+            'style': 'minimal',
+        })
+
         
-        self.vim.current.buffer[:] = self.buffer_branch.format(current_branch.stdout.strip(), result.stdout).strip().splitlines()
 
         # Prevent editing in the buffer
         self.vim.command('setlocal nomodifiable')
@@ -196,12 +234,12 @@ Branchs
     @neovim.function('AutoGitAdd')
     def add(self, args):
         line_number = self.vim.current.window.cursor[0]
-        if line_number < self.start_line_status:
+        line_content = self.vim.current.buffer[line_number - 1][3:]
+        line_content = line_content.replace('"',r"").replace(' ',r'\ ')
+        if line_number < self.start_line_status or line_content  == '' :
             self.vim.command('echo "Invalid select "')
             return
         
-        line_content = self.vim.current.buffer[line_number - 1][3:]
-        line_content = line_content.replace('"',r"").replace(' ',r'\ ')
         subprocess.run(['git', 'add', line_content])
 
         self.vim.command('echo "Added file: {}"'.format(line_content))
@@ -212,12 +250,12 @@ Branchs
     @neovim.function('AutoGitRestore')
     def restore(self, args):
         line_number = self.vim.current.window.cursor[0]
-        if line_number < self.start_line_status:
+        line_content = self.vim.current.buffer[line_number - 1]
+        line_content = line_content.replace('"',r"").replace(' ',r'\ ')
+        if line_number < self.start_line_status or line_content  == '':
             self.vim.command('echo "Invalid select "')
             return
         
-        line_content = self.vim.current.buffer[line_number - 1][3:]
-        line_content = line_content.replace('"',r"").replace(' ',r'\ ')
         subprocess.run(['git', 'restore','--staged', line_content])
 
         self.vim.command('echo "Restored file: {}"'.format(line_content))
@@ -230,10 +268,17 @@ Branchs
         
         self.vim.command('setlocal modifiable')
         if buf == 0:
-            result = subprocess.run(['git', 'status', '--short'], capture_output=True, text=True)
+            untracked_files= subprocess.run(['git', 'status', '--short'], capture_output=True, text=True)
+            staging_files= subprocess.run(['git', 'diff','--name-only', '--cached'], capture_output=True, text=True)
             current_branch = subprocess.run(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], capture_output=True, text=True)
-            self.vim.current.buffer[:] = self.buffer_status.format(current_branch.stdout.strip(), result.stdout).strip().splitlines()
+            l = untracked_files.stdout.split("\n")
+            for i in l[:-1]:
+                if  i[1] == ' ':
+                    l.remove(i)
 
+            untracked_files = '\n'.join(l)
+            l = []
+            self.vim.current.buffer[:] = self.buffer_status.format(current_branch.stdout.strip(), untracked_files, staging_files.stdout).strip().splitlines()
         if buf  == 1:
             result = subprocess.run(['git', 'branch','-a'], capture_output=True, text=True)
             current_branch = subprocess.run(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], capture_output=True, text=True)
