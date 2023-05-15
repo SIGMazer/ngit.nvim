@@ -1,3 +1,4 @@
+from os import sync
 import neovim 
 import subprocess
 
@@ -11,6 +12,7 @@ class AutoGitPlugin(object):
         self.buffer_status = """
 help
 
+branchs : 1
 add : a
 restore form staging : r
 commit : c
@@ -27,6 +29,7 @@ file status
         self.buffer_branch="""
 help
 
+git status : 1
 switch : i
 merge : m
 delete branch : d
@@ -40,13 +43,15 @@ Branchs
 {}
 """
 
+        self.start_line_branch = 14
+        self.start_line_status= 15
     @neovim.command('AutoGit', nargs='*', range='')
     def auto_git(self, args, range):
         # Run git status command
         result = subprocess.run(['git', 'status', '--short'], capture_output=True, text=True)
         current_branch = subprocess.run(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], capture_output=True, text=True)
 
-        self.vim.command('sp')
+        self.vim.command('vs')
         self.vim.command('enew')
         
         self.vim.current.buffer[:] = self.buffer_status.format(current_branch.stdout.strip(), result.stdout).strip().splitlines()
@@ -55,8 +60,8 @@ Branchs
         self.vim.command('setlocal nomodifiable')
 
 
-        # Jump to the first line of the buffer
-        self.vim.command('normal gg')
+        # Jump to the first line of files
+        self.vim.command(':15')
 
         # Map 'a' key to return the current line content and perform git add
         self.vim.command("nnoremap <buffer> a :call AutoGitAdd()<CR>")
@@ -65,16 +70,16 @@ Branchs
         self.vim.command("nnoremap <buffer> p :call AutoGitPush()<CR>")  
         self.vim.command("nnoremap <buffer> u :call AutoGitPull()<CR>")
         self.vim.command("nnoremap <buffer> q :q! <CR>")
-   
+        self.vim.command("nnoremap <buffer> 1 :call AutoGitpanel(2) <CR>")
+
     @neovim.command('AutoGitBranch', nargs='*', range='')
     def branchs(self, args, range):
-    
-
+     
         result = subprocess.run(['git', 'branch','-a'], capture_output=True, text=True)
         current_branch = subprocess.run(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], capture_output=True, text=True)
         result.stdout = result.stdout.replace('*',' ')
         
-        self.vim.command('sp')
+        self.vim.command('vs')
         self.vim.command('enew')
         
         self.vim.current.buffer[:] = self.buffer_branch.format(current_branch.stdout.strip(), result.stdout).strip().splitlines()
@@ -83,22 +88,38 @@ Branchs
         self.vim.command('setlocal nomodifiable')
 
 
-        # Jump to the first line of the buffer
-        self.vim.command('normal gg')
+        # Jump to the first line of branch 
+        self.vim.command(':14')
         
         self.vim.command("nnoremap <buffer> q :q! <CR>")
         self.vim.command("nnoremap <buffer> i :call AutoGitSwitch() <CR>")
         self.vim.command("nnoremap <buffer> a :call AutoGitMakeBranch() <CR>")
         self.vim.command("nnoremap <buffer> d :call AutoGitDeleteBranch() <CR>")
         self.vim.command("nnoremap <buffer> m :call AutoGitMerge() <CR>")
+        self.vim.command("nnoremap <buffer> 1 :call AutoGitpanel(1) <CR>")
 
+
+    @neovim.function('AutoGitpanel', sync=True)
+    def switch_panels(self, args):
+       self.vim.command(":q!")
+       if args == [1] :
+           self.vim.command(":AutoGit")
+           return
+       if args == [2] :
+           self.vim.command(":AutoGitBranch")
+           return
+            
     @neovim.function('AutoGitMerge')
     def merge(self, args):
         line_number = self.vim.current.window.cursor[0]
-        if line_number < 13:
+        if line_number < self.start_line_branch:
             self.vim.command('echo "Invalid select "')
             return
         line_content = self.vim.current.buffer[line_number - 1][2:]
+        
+        if line_content[:15] == 'remotes/origin/':
+            self.vim.command('echo "Invalid select "')
+            return
         
         result = subprocess.run(['git', 'merge',line_content], capture_output=True, text=True)
         if len(result.stderr) > 0:
@@ -110,7 +131,7 @@ Branchs
     @neovim.function('AutoGitDeleteBranch')
     def delete_branch(self, args):
         line_number = self.vim.current.window.cursor[0]
-        if line_number < 13:
+        if line_number < self.start_line_branch:
             self.vim.command('echo "Invalid select "')
             return
         line_content = self.vim.current.buffer[line_number - 1][2:]
@@ -135,7 +156,7 @@ Branchs
     @neovim.function('AutoGitSwitch')
     def switch(self, args):
         line_number = self.vim.current.window.cursor[0]
-        if line_number < 13:
+        if line_number < self.start_line_branch:
             self.vim.command('echo "Invalid select "')
             return
         line_content = self.vim.current.buffer[line_number - 1][2:]
@@ -175,11 +196,12 @@ Branchs
     @neovim.function('AutoGitAdd')
     def add(self, args):
         line_number = self.vim.current.window.cursor[0]
-        if line_number < 14:
+        if line_number < self.start_line_status:
             self.vim.command('echo "Invalid select "')
             return
         
         line_content = self.vim.current.buffer[line_number - 1][3:]
+        line_content = line_content.replace('"',r"").replace(' ',r'\ ')
         subprocess.run(['git', 'add', line_content])
 
         self.vim.command('echo "Added file: {}"'.format(line_content))
@@ -190,11 +212,12 @@ Branchs
     @neovim.function('AutoGitRestore')
     def restore(self, args):
         line_number = self.vim.current.window.cursor[0]
-        if line_number < 14:
+        if line_number < self.start_line_status:
             self.vim.command('echo "Invalid select "')
             return
         
         line_content = self.vim.current.buffer[line_number - 1][3:]
+        line_content = line_content.replace('"',r"").replace(' ',r'\ ')
         subprocess.run(['git', 'restore','--staged', line_content])
 
         self.vim.command('echo "Restored file: {}"'.format(line_content))
