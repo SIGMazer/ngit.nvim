@@ -4,15 +4,17 @@ Neovim plugin that make using git with neovim easer
 ## ScreenShot
 <details>
       <summary>Git Status</summary>
-<img src="https://github.com/SIGMazer/nvim-auto-git/assets/88988252/b8950455-6d7e-445e-8b9b-1fa7dfd904da" alt="Alt text" title="Optional title">
+<img src="https://github.com/SIGMazer/nvim-auto-git/assets/88988252/93795c5c-6ad3-4685-8c0a-5e99a4bd272b" alt="Alt text" title="Optional title">
 Press the letter in help to execute the command 
 Ex. 
     if press `a`  when cursor at the same line with `a.txt` it will add it to staging 
 </details>
 <details>
       <summary>Git Branch</summary>
-<img src="https://github.com/SIGMazer/nvim-auto-git/assets/88988252/dbd74cf9-cfbc-443a-855c-df35a3790a06" alt="Alt text" title="Optional title">
+<img src="https://github.com/SIGMazer/nvim-auto-git/assets/88988252/29d9a0d8-3e24-48a4-95eb-f73ac74100e3" alt="Alt text" title="Optional title">
 </details>
+
+
 
 ## Installation 
 
@@ -51,7 +53,7 @@ vim.keymap.set("n","<leader>gb",'<Cmd>lua vim.cmd(":AutoGitBranch")<CR>')
 - [x] merge
 - [ ] stash
 - [ ] diff 
-- [x] branchs (add, switch) 
+- [x] branchs (add, switch, delete) 
 - [ ] log
 - [ ] reset 
 
