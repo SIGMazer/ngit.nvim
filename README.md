@@ -22,7 +22,6 @@ Add to `packer.lua`:
 ```
     use {
         'SIGMazer/nvim-auto-git',
-        run='bash ~/.local/share/nvim/site/pack/packer/start/nvim-auto-git/setup.sh', // repo path 
         post_install = {'UpdateRemotePlugins'}
     }
 ```
