@@ -1,12 +1,19 @@
 from os import sync
-import neovim 
+from git.index.base import Treeish
+import neovim
 import subprocess
+from pynvim import Nvim
+
+from git.repo import Repo
+
+from auto_git.Git import Git
 
 
 @neovim.plugin
-class AutoGitPlugin(object):
-    def __init__(self, vim):
-        self.vim = vim
+class AutoGit(object):
+    def __init__(self, vim: Nvim):
+        self.vim = vim 
+        self.git = Git()
         self.buffer_status = """
 help
 
@@ -20,10 +27,10 @@ exit : q
 
 Current branch = {}
 
-untracked files
+Untracked files
 {}
 
-staging files
+Staging files
 {}
 """
         self.buffer_branch="""
@@ -45,28 +52,10 @@ Branchs
 
         self.start_line_branch = 13
         self.start_line_status= 13
-    @neovim.command('AutoGit', nargs='*', range='')
-    def auto_git(self, args, range):
-        # Run git status command
-        untracked_files= subprocess.run(['git', 'status', '--short'], capture_output=True, text=True)
-        staging_files= subprocess.run(['git', 'diff','--name-only', '--cached'], capture_output=True, text=True)
-        current_branch = subprocess.run(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], capture_output=True, text=True)
-        l = untracked_files.stdout.split("\n")
-        for i in l[:-1]:
-            if  i[1] == ' ':
-                l.remove(i)
 
-        untracked_files = '\n'.join(l)
-        l = []
+    def window(self,buf) -> None:
         width = 100 
-        height = 80 
-        content = self.buffer_status.format(current_branch.stdout.strip(), untracked_files, staging_files.stdout).strip().splitlines()
-
-        buf = self.vim.api.create_buf(False, True)
-
-        self.vim.api.buf_set_lines(buf, 0, -1, False, content)
-
-
+        height = 30 
 
         win = self.vim.api.open_win(buf, True, {
             'relative': 'win',
@@ -82,14 +71,29 @@ Branchs
 
         # Prevent editing in the buffer
         self.vim.command('setlocal nomodifiable')
+        
 
 
+    @neovim.command('AutoGit', nargs='*', range='', sync=True)
+    def auto_git(self, args, range):
+        # Run git status command
+        untracked_files, staging_files= self.git.status() 
+        current_branch = self.git.current_branch() 
+        staging_files = [item.a_path for item in staging_files]
+        content = self.buffer_status.format(current_branch, '\n'.join(untracked_files), '\n'.join(staging_files)).strip().splitlines()
+
+        buf = self.vim.api.create_buf(False, True)
+
+        self.vim.api.buf_set_lines(buf, 0, -1, False, content)
+
+        self.window(buf)
+        self.update(0)
+        
         # Jump to the first line of files
         self.vim.command(':15')
 
         # Map 'a' key to return the current line content and perform git add
-        self.vim.command("nnoremap <buffer> a :call AutoGitAdd()<CR>")
-        self.vim.command("nnoremap <buffer> r :call AutoGitRestore()<CR>")
+        self.vim.command("nnoremap <buffer> a :call AutoGitModify()<CR>")
         self.vim.command("nnoremap <buffer> c :call AutoGitCommit()<CR>")
         self.vim.command("nnoremap <buffer> p :call AutoGitPush()<CR>")  
         self.vim.command("nnoremap <buffer> u :call AutoGitPull()<CR>")
@@ -231,37 +235,33 @@ Branchs
         self.update(0)
 
 
-    @neovim.function('AutoGitAdd')
-    def add(self, args):
-        line_number = self.vim.current.window.cursor[0]
-        line_content = self.vim.current.buffer[line_number - 1][3:]
-        line_content = line_content.replace('"',r"").replace(' ',r'\ ')
-        if line_number < self.start_line_status or line_content  == '' :
-            self.vim.command('echo "Invalid select "')
-            return
-        
-        subprocess.run(['git', 'add', line_content])
-
-        self.vim.command('echo "Added file: {}"'.format(line_content))
-    
-        self.update(0)
-
-   
-    @neovim.function('AutoGitRestore')
-    def restore(self, args):
+    @neovim.function('AutoGitModify',sync=True)
+    def modify(self, args):
+        untracked_files, staging_files= self.git.status() 
+        staging_files = [item.a_path for item in staging_files]
         line_number = self.vim.current.window.cursor[0]
         line_content = self.vim.current.buffer[line_number - 1]
-        line_content = line_content.replace('"',r"").replace(' ',r'\ ')
-        if line_number < self.start_line_status or line_content  == '':
-            self.vim.command('echo "Invalid select "')
+        if line_content == '':
             return
-        
-        subprocess.run(['git', 'restore','--staged', line_content])
+        if line_content == 'Untracked files':
+            self.git.git_add(line_content,True)
+            self.update(0)
+            return
+        if line_content == 'Staging files':
+            self.git.resotre(line_content, True)
+            self.update(0)
 
-        self.vim.command('echo "Restored file: {}"'.format(line_content))
-        
+        if line_content in staging_files:
+            self.git.resotre(line_content, False)
+
+        line_content = self.vim.current.buffer[line_number - 1][3:]
+        line_content = line_content.replace('"',r"").replace(' ',r'\ ')
+        files = [files[3:] for files in untracked_files] 
+        if line_content in files:
+            self.git.git_add(line_content,False) 
+
         self.update(0)
-
+   
 
     @neovim.function('AutoGitUpdate')
     def update(self,buf):
