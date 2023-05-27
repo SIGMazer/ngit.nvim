@@ -266,7 +266,6 @@ Branchs
     @neovim.function('AutoGitUpdate')
     def update(self,buf):
         
-        self.vim.command('echo ""')
         self.vim.command('setlocal modifiable')
         if buf == 0:
             untracked_files, staging_files= self.git.status() 
