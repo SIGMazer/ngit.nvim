@@ -251,8 +251,10 @@ Branchs
             self.git.resotre(line_content, False)
 
         if match is not None:
+            self.vim.command(f'echo "Pushing {self.git.unpushed()} to {self.git.current_branch()}"')
             self.git.push()
-            self.update(1)
+            self.update(0)
+            return
 
         line_content = self.vim.current.buffer[line_number - 1][3:]
         line_content = line_content.replace('"',r"").replace(' ',r'\ ')
@@ -287,7 +289,12 @@ Branchs
     
 
     @neovim.function('AutoGitPull')
-    def pull(self):
+    def pull(self,args):
 
-        self.git.pull()
+        result =self.git.pull()
+
+        if len(result.stderr) > 0:
+            self.vim.command('echo "{}"'.format(result.stderr))
+        else: 
+            self.vim.command('echo "{}"'.format(result.stdout))
         self.update(0)

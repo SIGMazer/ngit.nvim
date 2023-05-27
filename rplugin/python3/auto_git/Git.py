@@ -52,20 +52,13 @@ class Git(object):
     
     def push(self) -> None :
         cmd = f"git push -u origin {self.unpushed()}:{self.current_branch()}"
-        self.vim.command(f'echo "Pushing {self.unpushed()} to {self.current_branch}"')
         result =  subprocess.run(cmd.split(' '), capture_output=True, text=True)
         if len(result.stderr) > 0:
             self.vim.command('echo "{}"'.format(result.stderr))
-        else: 
-            self.vim.command(f'echo "Pushing {self.unpushed()} to {self.current_branch}"')
     
     def pull(self):
 
-        result =  subprocess.run(['git', 'pull'], capture_output=True, text=True)
+        return  subprocess.run(['git', 'pull'], capture_output=True, text=True)
         
-        if len(result.stderr) > 0:
-            self.vim.command('echo "{}"'.format(result.stderr))
-        else: 
-            self.vim.command('echo "{}"'.format(result.stdout))
 
 
