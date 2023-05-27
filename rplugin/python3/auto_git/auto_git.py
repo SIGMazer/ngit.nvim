@@ -1,5 +1,6 @@
 from os import sync
-from git.index.base import Treeish
+import re
+import time
 import neovim
 import subprocess
 from pynvim import Nvim
@@ -15,15 +16,7 @@ class AutoGit(object):
         self.vim = vim 
         self.git = Git()
         self.buffer_status = """
-help
-
-branchs : 1
-add : a
-restore form staging : r
-commit : c
-push : p
-pull : u
-exit : q
+Help
 
 Current branch = {}
 
@@ -31,6 +24,9 @@ Untracked files
 {}
 
 Staging files
+{}
+
+Ready to push
 {}
 """
         self.buffer_branch="""
@@ -79,8 +75,8 @@ Branchs
         # Run git status command
         untracked_files, staging_files= self.git.status() 
         current_branch = self.git.current_branch() 
-        staging_files = [item.a_path for item in staging_files]
-        content = self.buffer_status.format(current_branch, '\n'.join(untracked_files), '\n'.join(staging_files)).strip().splitlines()
+        unpushed = self.git.unpushed()
+        content = self.buffer_status.format(current_branch, "\n".join(untracked_files), '\n'.join(staging_files), unpushed).strip().splitlines()
 
         buf = self.vim.api.create_buf(False, True)
 
@@ -93,10 +89,9 @@ Branchs
         self.vim.command(':15')
 
         # Map 'a' key to return the current line content and perform git add
-        self.vim.command("nnoremap <buffer> a :call AutoGitModify()<CR>")
+        self.vim.command("nnoremap <buffer> a :call AutoGitControle()<CR>")
         self.vim.command("nnoremap <buffer> c :call AutoGitCommit()<CR>")
-        self.vim.command("nnoremap <buffer> p :call AutoGitPush()<CR>")  
-        self.vim.command("nnoremap <buffer> u :call AutoGitPull()<CR>")
+        self.vim.command("nnoremap <buffer> p :call AutoGitPull()<CR>")
         self.vim.command("nnoremap <buffer> q :q! <CR>")
         self.vim.command("nnoremap <buffer> 1 :call AutoGitpanel(2) <CR>")
 
@@ -227,20 +222,21 @@ Branchs
 
     @neovim.function('AutoGitCommit')
     def commit(self, args):
-        commit_message = self.vim.call('input', 'Enter commit message: ')
-        subprocess.run(['git', 'commit', '-m', commit_message])
+        commit_message = self.vim.call('input', 'enter commit message: ')
+        self.git.commit(commit_message)
 
-        self.vim.command('echo "Committed with message: {}"'.format(commit_message))
+        self.vim.command('echo "committed with message: {}"'.format(commit_message))
 
         self.update(0)
 
 
-    @neovim.function('AutoGitModify',sync=True)
-    def modify(self, args):
+    @neovim.function('AutoGitControle',sync=True)
+    def contorle(self, args):
+        self.vim.command('echo ""')
         untracked_files, staging_files= self.git.status() 
-        staging_files = [item.a_path for item in staging_files]
         line_number = self.vim.current.window.cursor[0]
         line_content = self.vim.current.buffer[line_number - 1]
+        match = re.fullmatch(self.git.hash_regex, line_content) 
         if line_content == '':
             return
         if line_content == 'Untracked files':
@@ -254,6 +250,10 @@ Branchs
         if line_content in staging_files:
             self.git.resotre(line_content, False)
 
+        if match is not None:
+            self.git.push()
+            self.update(1)
+
         line_content = self.vim.current.buffer[line_number - 1][3:]
         line_content = line_content.replace('"',r"").replace(' ',r'\ ')
         files = [files[3:] for files in untracked_files] 
@@ -266,19 +266,15 @@ Branchs
     @neovim.function('AutoGitUpdate')
     def update(self,buf):
         
+        self.vim.command('echo ""')
         self.vim.command('setlocal modifiable')
         if buf == 0:
-            untracked_files= subprocess.run(['git', 'status', '--short'], capture_output=True, text=True)
-            staging_files= subprocess.run(['git', 'diff','--name-only', '--cached'], capture_output=True, text=True)
-            current_branch = subprocess.run(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], capture_output=True, text=True)
-            l = untracked_files.stdout.split("\n")
-            for i in l[:-1]:
-                if  i[1] == ' ':
-                    l.remove(i)
+            untracked_files, staging_files= self.git.status() 
+            current_branch = self.git.current_branch() 
+            unpushed = self.git.unpushed()
+            content = self.buffer_status.format(current_branch, "\n".join(untracked_files), '\n'.join(staging_files), unpushed).strip().splitlines()
 
-            untracked_files = '\n'.join(l)
-            l = []
-            self.vim.current.buffer[:] = self.buffer_status.format(current_branch.stdout.strip(), untracked_files, staging_files.stdout).strip().splitlines()
+            self.vim.current.buffer[:] = content 
         if buf  == 1:
             result = subprocess.run(['git', 'branch','-a'], capture_output=True, text=True)
             current_branch = subprocess.run(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], capture_output=True, text=True)
@@ -289,27 +285,10 @@ Branchs
    
     
 
-    @neovim.function('AutoGitPush')
-    def push(self, args):
-        current_branch = subprocess.run(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], capture_output=True, text=True)
-        result =  subprocess.run(['git', 'push','-u','origin',current_branch.stdout[:-1]], capture_output=True, text=True)
-        if len(result.stderr) > 0:
-            self.vim.command('echo "{}"'.format(result.stderr))
-        else: 
-            self.vim.command('echo "Pushed changes"')
-
-        self.update(0)
     
 
     @neovim.function('AutoGitPull')
-    def pull(self, args):
+    def pull(self):
 
-        result =  subprocess.run(['git', 'pull'], capture_output=True, text=True)
-        
-        if len(result.stderr) > 0:
-            self.vim.command('echo "{}"'.format(result.stderr))
-        else: 
-            self.vim.command('echo "{}"'.format(result.stdout))
-
-
+        self.git.pull()
         self.update(0)
