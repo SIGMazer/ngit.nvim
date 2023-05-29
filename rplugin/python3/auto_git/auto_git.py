@@ -116,7 +116,9 @@ Ready to push
        
     def switch(self, branch: str):
         out = self.git.switch(branch).replace('\n','')     
+        self.vim.command('silent update')
         self.vim.command(f'echo "{out}"')
+        self.vim.command('silent !git checkout #')
 
     @neovim.function('AutoGitMakeBranch')
     def make_branch(self, args):
