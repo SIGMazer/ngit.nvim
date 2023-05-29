@@ -128,7 +128,7 @@ Ready to push
 
     @neovim.function('AutoGitCommit')
     def commit(self, args):
-        commit_message = self.vim.call('input', 'enter commit message: ')
+        commit_message = self.vim.call('input', 'Enter commit message: ')
         self.git.commit(commit_message)
 
         self.vim.command('echo "committed with message: {}"'.format(commit_message))
@@ -167,6 +167,7 @@ Ready to push
             self.update(0)
         if line_content[2:] in valid_branchs:
             self.switch(line_content[2:])
+            self.update(0)
         
         line_content = self.vim.current.buffer[line_number - 1][3:]
         line_content = line_content.replace('"',r"").replace(' ',r'\ ')
