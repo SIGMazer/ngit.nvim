@@ -52,8 +52,9 @@ class Git(object):
     
     def push(self) -> str :
         cmd = f"git push -u origin {self.unpushed()}:{self.current_branch()}"
+        hash = self.unpushed()
         result =  subprocess.run(cmd.split(' '), capture_output=True, text=True)
-        return f"Pushing {self.unpushed()} to {self.current_branch()}"         
+        return f"Pushing {hash} to {self.current_branch()}"         
         
     def pull(self):
 
