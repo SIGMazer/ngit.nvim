@@ -50,15 +50,39 @@ class Git(object):
             return ""
         return hash_local
     
-    def push(self) -> None :
+    def push(self) -> str :
         cmd = f"git push -u origin {self.unpushed()}:{self.current_branch()}"
         result =  subprocess.run(cmd.split(' '), capture_output=True, text=True)
-        if len(result.stderr) > 0:
-            self.vim.command('echo "{}"'.format(result.stderr))
-    
+        return result.stderr if result.stderr else f"Pushing {self.unpushed()} to {self.current_branch()}"         
+        
     def pull(self):
 
         return  subprocess.run(['git', 'pull'], capture_output=True, text=True)
         
 
+    def branchs(self) -> str:
+        return subprocess.run(['git', 'branch','-a'], capture_output=True, text=True).stdout.replace('*',' ')
 
+    def make_branch(self,name:str) -> str:
+        
+        branch =subprocess.run(['git', 'branch',name], capture_output=True, text=True)
+        return branch.stderr if branch.stderr else f"Create branch {name}"
+
+    def merge(self, branch: str) -> str:
+        cmd = f'git merge {branch}'
+        out =subprocess.run(cmd.split(' '), capture_output=True, text=True).stderr
+        return out if out else f'Merge branch -> {self.current_branch()}'
+
+    def switch(self, branch: str) -> str:
+        cmd = f'git switch {branch}'
+        out =subprocess.run(cmd.split(' '), capture_output=True, text=True).stderr
+        return out if out else f'Switch to {branch}'
+
+    def delete_branch(self, branch: str) -> str:
+        if 'remotes/origin' in branch:
+            out= subprocess.run(['git', 'push','origin','--delete', branch[15:]], capture_output=True, text=True).stderr
+        else :
+            out= subprocess.run(['git', 'branch','-D', branch], capture_output=True, text=True).stderr
+        return out if out  else f"Branch {branch} was deleted "
+            
+        
