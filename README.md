@@ -27,19 +27,11 @@ Add to `packer.lua`:
 ```
 and restart nvim 
 
-Or install it manually
-```
-git clone https://github.com/SIGMazer/nvim-auto-git.git
-cd nvim-auto-git
-./setup.sh
-```
-Use `:UpdateRemotePlugins` to update packeges and restart nvim 
 
 ## Remap
 Add to `remap.lua` :
 ```
 vim.keymap.set("n","<leader>gs",'<Cmd>lua vim.cmd(":AutoGit")<CR>')
-vim.keymap.set("n","<leader>gb",'<Cmd>lua vim.cmd(":AutoGitBranch")<CR>')
 ```
 
 ## TO DO
