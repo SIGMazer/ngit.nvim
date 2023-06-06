@@ -19,7 +19,7 @@ class AutoGit(object):
         self.buffer_status = """
 Help
 
-branchs -> ({})
+Branchs -> ({})
 {}
 Untracked files
 {}
