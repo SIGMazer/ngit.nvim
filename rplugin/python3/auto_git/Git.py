@@ -1,6 +1,4 @@
 import typing
-import re
-import os
 from git.repo import Repo
 import subprocess
 import pynvim as vim

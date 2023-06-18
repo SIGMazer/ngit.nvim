@@ -1,6 +1,4 @@
-from os import sync
 import re
-import time
 import neovim
 import subprocess
 from pynvim import Nvim
