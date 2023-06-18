@@ -21,7 +21,7 @@ Use [packer](https://github.com/wbthomason/packer.nvim) to quick install.
 Add to `packer.lua`:
 ```
     use {
-        'SIGMazer/nvim-auto-git',
+        'SIGMazer/ngit.nvim',
         post_install = {'UpdateRemotePlugins'}
     }
 ```
